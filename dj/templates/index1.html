@@ -37,24 +37,9 @@
       </div>
 
       <div class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-10 max-w-3xl mx-auto shadow-xl">
-        <div class="flex flex-col items-center mb-6">
-          <div class="flex items-center justify-center gap-4 mb-2">
-            <img
-              src="{% static 'img/cskang.jpg' %}"
-              alt="Profile"
-              class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-3 border-white/30 shadow-lg hover:scale-110 transition-transform duration-300 cursor-pointer"
-              onclick="location.href='{% url 'phrase:process_text' %}'"
-              onerror="this.outerHTML='🎬'"
-            />
-            <div class="flex flex-col">
-              <h1 class="text-3xl md:text-4xl font-bold text-white">
-                영화 구문 검색
-              </h1>
-              <p class="text-white/70 text-sm mt-1">영어 구문으로 영화 장면을 찾아보세요</p>
-            </div>
-          </div>
-        </div>
-
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-white mb-6">
+          🎬 영화 구문 검색
+        </h1>
         <form method="post" action="{% url 'phrase:process_text' %}" class="relative flex">
           {% csrf_token %}
           <input
