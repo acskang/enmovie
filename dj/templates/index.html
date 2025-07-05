@@ -161,8 +161,8 @@
       </div>
     </div>
     
-    <!-- Footer with conditional positioning -->
-    <footer class="bg-white rounded-lg shadow dark:bg-gray-800 {% if not movies %}fixed bottom-5 left-1/2 transform -translate-x-1/2 w-full max-w-6xl mx-auto{% else %}mt-12{% endif %}">
+    <!-- Footer with conditional positioning - hidden on small screens -->
+    <footer class="hidden md:block bg-white rounded-lg shadow dark:bg-gray-800 {% if not movies %}fixed bottom-5 left-1/2 transform -translate-x-1/2 w-full max-w-6xl mx-auto{% else %}mt-12{% endif %}">
       <div class="w-full mx-auto max-w-screen-xl p-4 md:flex md:items-center md:justify-between">
         <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400">© 2009 <a href="https://flowbite.com/" class="hover:underline">Ahading™</a>. All Rights Reserved.
       </span>
