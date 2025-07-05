@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    {% load static %}
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>영화 구문 검색</title>
+    <link rel="icon" href="{% static 'favicon.ico' %}" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: '#6366f1',
+              secondary: '#8b5cf6',
+              dark: '#0f172a',
+              card: '#1e293b'
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-dark text-white font-sans min-h-screen px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-6 bg-white/10 border border-white/20 rounded-xl p-4 text-center">
+        <p>
+          테스트 페이지로,
+          <a href="https://www.playphrase.me/" target="_blank" class="text-yellow-300 hover:underline">플레이프레이즈미</a> 와
+          <a href="https://www.imdb.com/" target="_blank" class="text-yellow-300 hover:underline">IMDB</a> 데이터를 이용하고 있습니다.
+        </p>
+      </div>
+
+      <div class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-10 max-w-3xl mx-auto shadow-xl">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-white mb-6">
+          🎬 영화 구문 검색
+        </h1>
+        <form method="post" action="{% url 'phrase:process_text' %}" class="relative flex">
+          {% csrf_token %}
+          <input
+            type="text"
+            name="user_text"
+            id="user_text"
+            placeholder="영어 구문을 입력하세요..."
+            autofocus
+            autocomplete="off"
+            class="w-full rounded-full border border-transparent bg-white/10 text-white placeholder:text-gray-400 px-6 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+          />
+          <button
+            type="submit"
+            class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full border border-transparent text-white transition focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="검색"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5" />
+              <path d="M5 12l7-7 7 7" />
+            </svg>
+          </button>
+        </form>
+
+        {% if message %}
+        <div class="mt-6 text-center text-lg text-white/90">
+          <strong>검색한 구문:</strong> "{{ message }}"
+        </div>
+        {% endif %}
+      </div>
+
+      {% if movies %}
+      <div>
+        <h2 class="text-2xl font-semibold text-center text-white mb-2">🎥 검색 결과</h2>
+        <p class="text-center text-white/70 mb-6">상위 5개 결과를 표시합니다</p>
+
+        <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {% for movie in movies|slice:":5" %}
+          <div
+            class="bg-card text-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition cursor-pointer relative"
+            onclick="openVideoModal('{% if movie.video_file %}{{ movie.video_file.url|escapejs }}{% endif %}', '{{ movie.name|escapejs }}', '{{ movie.start_time|escapejs }}', '{{ movie.text|escapejs }}')"
+          >
+            <div class="relative h-60 bg-gray-700 flex items-center justify-center">
+              {% if movie.poster_image %}
+              <img
+                src="{{ movie.poster_image.url }}"
+                alt="{{ movie.name }}"
+                class="object-contain w-full h-full"
+                onload="this.style.opacity='1'"
+                onerror="this.parentElement.innerHTML='<div class=\'text-center p-8 text-gray-400\'>이미지를 불러올 수 없습니다</div>'"
+                style="opacity:0; transition: opacity 0.3s ease"
+              />
+              {% else %}
+              <div class="text-gray-400 text-center">🎬 포스터 없음</div>
+              {% endif %}
+              <div class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition">
+                <div class="text-white text-xl">▶ 클릭하여 재생</div>
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="font-semibold text-lg mb-1">{{ movie.name }}</h3>
+              <p class="text-sm text-gray-300">⏰ {{ movie.start_time }}</p>
+              <p class="mt-2 italic text-sm border-l-4 border-primary pl-3 text-gray-200">"{{ movie.text }}"</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div
+        id="videoModal"
+        class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center"
+      >
+        <div class="bg-white rounded-2xl p-6 max-w-2xl w-full relative">
+          <button
+            class="absolute top-3 right-3 text-gray-500 hover:text-black text-2xl"
+            onclick="closeVideoModal()"
+            aria-label="닫기"
+          >&times;</button>
+          <h3 class="text-xl font-bold mb-4 text-dark" id="modalTitle">영화 클립</h3>
+          <video id="videoPlayer" class="w-full rounded shadow" controls loop>
+            <source id="videoSource" src="" type="video/mp4" />
+            브라우저가 비디오를 지원하지 않습니다.
+          </video>
+          <div class="mt-4 bg-gray-100 p-4 rounded">
+            <p class="text-sm text-gray-700"><strong>시작 시간:</strong> <span id="videoTime"></span></p>
+            <blockquote id="videoQuote" class="mt-2 pl-3 border-l-4 border-primary italic text-gray-700"></blockquote>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function openVideoModal(videoUrl, title, startTime, quote) {
+        if (!videoUrl) return alert('재생할 비디오가 없습니다.');
+        document.getElementById('videoSource').src = videoUrl;
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('videoTime').textContent = startTime;
+        document.getElementById('videoQuote').textContent = quote;
+        document.getElementById('videoPlayer').load();
+        document.getElementById('videoModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeVideoModal() {
+        document.getElementById('videoModal').classList.add('hidden');
+        document.getElementById('videoPlayer').pause();
+        document.body.style.overflow = 'auto';
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeVideoModal();
+      });
+    </script>
+  </body>
+</html>
