@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from phrase.models import Movie, MovieQuote
 
+#curl "https://movie.thesysm.com/api/search/?q=hello&limit=5"
 class MovieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
