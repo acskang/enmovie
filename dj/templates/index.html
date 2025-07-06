@@ -21,10 +21,49 @@
               dark: '#0f172a',
               card: '#1e293b'
             },
+            animation: {
+              'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'bounce-slow': 'bounce 2s infinite',
+              'spin-slow': 'spin 3s linear infinite',
+              'fade-in': 'fadeIn 0.5s ease-in',
+              'slide-up': 'slideUp 0.6s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' }
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' }
+              }
+            }
           },
         },
       };
     </script>
+    <style>
+      .loading-dots::after {
+        content: '';
+        animation: loading 1.5s infinite;
+      }
+      
+      @keyframes loading {
+        0%, 20% { content: ''; }
+        40% { content: '.'; }
+        60% { content: '..'; }
+        80%, 100% { content: '...'; }
+      }
+      
+      .progress-bar {
+        transition: width 0.5s ease-in-out;
+      }
+      
+      .glass-effect {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+    </style>
   </head>
   <body class="bg-dark text-white font-sans min-h-screen px-4 py-8">
     <div class="max-w-6xl mx-auto">
@@ -69,7 +108,7 @@
           </div>
         </div>
 
-        <form method="post" action="{% url 'phrase:process_text' %}" class="relative flex">
+        <form method="post" action="{% url 'phrase:process_text' %}" class="relative flex" id="searchForm">
           {% csrf_token %}
           <input
             type="text"
@@ -82,6 +121,7 @@
           />
           <button
             type="submit"
+            id="searchButton"
             class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full border border-transparent text-white transition focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="검색"
           >
@@ -99,15 +139,84 @@
         {% endif %}
       </div>
 
+      <!-- 로딩 애니메이션 섹션 -->
+      <div id="loadingSection" class="hidden max-w-3xl mx-auto mb-10">
+        <div class="bg-white/10 glass-effect border border-white/20 rounded-2xl p-8 text-center animate-fade-in">
+          <!-- 메인 로딩 애니메이션 -->
+          <div class="mb-8">
+            <div class="relative inline-block">
+              <div class="w-20 h-20 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-2xl animate-bounce-slow">🎬</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 진행 상태 텍스트 -->
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-white mb-2">영화 구문을 검색하고 있습니다</h3>
+            <p id="loadingStatus" class="text-white/70 loading-dots">playphrase.me에서 데이터를 가져오는 중</p>
+          </div>
+
+          <!-- 진행률 바 -->
+          <div class="mb-6">
+            <div class="w-full bg-white/20 rounded-full h-2 overflow-hidden">
+              <div id="progressBar" class="progress-bar h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <p class="text-sm text-white/60 mt-2">
+              <span id="progressPercent">0</span>% 완료
+            </p>
+          </div>
+
+          <!-- 진행 단계 표시 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div id="step1" class="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10">
+              <div class="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center mb-2">
+                <svg class="w-4 h-4 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </div>
+              <span class="text-sm text-white/80">데이터 수집</span>
+            </div>
+            
+            <div id="step2" class="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10 opacity-50">
+              <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-2">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <span class="text-sm text-white/60">데이터 처리</span>
+            </div>
+            
+            <div id="step3" class="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10 opacity-50">
+              <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-2">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                </svg>
+              </div>
+              <span class="text-sm text-white/60">결과 생성</span>
+            </div>
+          </div>
+
+          <!-- 취소 버튼 -->
+          <div class="mt-6">
+            <button onclick="cancelSearch()" class="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 text-red-300 rounded-lg transition-colors duration-200">
+              검색 취소
+            </button>
+          </div>
+        </div>
+      </div>
+
       {% if movies %}
-      <div>
+      <div class="animate-slide-up">
         <h2 class="text-2xl font-semibold text-center text-white mb-2">🎥 검색 결과</h2>
         <p class="text-center text-white/70 mb-6">상위 5개 결과를 표시합니다</p>
 
         <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {% for movie in movies|slice:":5" %}
           <div
-            class="bg-card text-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition cursor-pointer relative"
+            class="bg-card text-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition cursor-pointer relative animate-fade-in"
+            style="animation-delay: {{ forloop.counter0|add:1 }}00ms"
             onclick="openVideoModal('{% if movie.video_file %}{{ movie.video_file.url|escapejs }}{% endif %}', '{{ movie.name|escapejs }}', '{{ movie.start_time|escapejs }}', '{{ movie.text|escapejs }}')"
           >
             <div class="relative h-60 bg-gray-700 flex items-center justify-center">
@@ -184,6 +293,133 @@
     </footer>
     
     <script>
+      let searchInProgress = false;
+      let progressInterval;
+
+      // 폼 제출 시 로딩 애니메이션 시작
+      document.getElementById('searchForm').addEventListener('submit', function(e) {
+        const userText = document.getElementById('user_text').value.trim();
+        if (!userText) {
+          alert('검색어를 입력해주세요.');
+          e.preventDefault();
+          return;
+        }
+
+        startLoadingAnimation();
+      });
+
+      function startLoadingAnimation() {
+        if (searchInProgress) return;
+        
+        searchInProgress = true;
+        const loadingSection = document.getElementById('loadingSection');
+        const searchButton = document.getElementById('searchButton');
+        
+        // 로딩 섹션 표시
+        loadingSection.classList.remove('hidden');
+        
+        // 검색 버튼 비활성화
+        searchButton.disabled = true;
+        searchButton.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // 페이지를 로딩 섹션으로 스크롤
+        loadingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // 진행률 애니메이션 시작
+        simulateProgress();
+      }
+
+      function simulateProgress() {
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const loadingStatus = document.getElementById('loadingStatus');
+        
+        let progress = 0;
+        let step = 1;
+        
+        progressInterval = setInterval(() => {
+          // 진행률 증가 (불규칙적으로)
+          const increment = Math.random() * 3 + 1;
+          progress = Math.min(progress + increment, 95); // 95%까지만 증가
+          
+          progressBar.style.width = progress + '%';
+          progressPercent.textContent = Math.floor(progress);
+          
+          // 단계별 상태 메시지 변경
+          if (progress > 20 && step === 1) {
+            step = 2;
+            loadingStatus.textContent = 'IMDB에서 포스터 이미지를 가져오는 중';
+            activateStep('step2');
+          } else if (progress > 60 && step === 2) {
+            step = 3;
+            loadingStatus.textContent = '비디오 파일을 다운로드하는 중';
+            activateStep('step3');
+          } else if (progress > 85 && step === 3) {
+            loadingStatus.textContent = '데이터베이스에 저장하는 중';
+          }
+          
+          // 실제 페이지가 로드되면 자동으로 완료 처리됨
+        }, 200 + Math.random() * 300);
+      }
+
+      function activateStep(stepId) {
+        // 이전 단계 완료 표시
+        const steps = ['step1', 'step2', 'step3'];
+        const currentIndex = steps.indexOf(stepId);
+        
+        for (let i = 0; i < currentIndex; i++) {
+          const prevStep = document.getElementById(steps[i]);
+          prevStep.classList.remove('opacity-50');
+          prevStep.querySelector('.bg-primary\\/30, .bg-white\\/20').className = 'w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mb-2';
+          prevStep.querySelector('svg').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
+          prevStep.querySelector('svg').classList.remove('animate-spin');
+        }
+        
+        // 현재 단계 활성화
+        const currentStep = document.getElementById(stepId);
+        currentStep.classList.remove('opacity-50');
+        currentStep.querySelector('.bg-white\\/20').className = 'w-8 h-8 rounded-full bg-primary flex items-center justify-center mb-2';
+        const svg = currentStep.querySelector('svg');
+        svg.classList.add('animate-spin');
+      }
+
+      function cancelSearch() {
+        if (confirm('검색을 취소하시겠습니까?')) {
+          searchInProgress = false;
+          clearInterval(progressInterval);
+          
+          // 페이지 새로고침으로 검색 취소
+          window.location.reload();
+        }
+      }
+
+      // 페이지 로드 완료 시 로딩 애니메이션 정리
+      window.addEventListener('load', function() {
+        if (searchInProgress) {
+          clearInterval(progressInterval);
+          
+          // 진행률 100% 완료
+          const progressBar = document.getElementById('progressBar');
+          const progressPercent = document.getElementById('progressPercent');
+          
+          progressBar.style.width = '100%';
+          progressPercent.textContent = '100';
+          
+          // 모든 단계 완료 표시
+          activateStep('step3');
+          
+          setTimeout(() => {
+            document.getElementById('loadingSection').classList.add('hidden');
+            searchInProgress = false;
+            
+            // 검색 버튼 재활성화
+            const searchButton = document.getElementById('searchButton');
+            searchButton.disabled = false;
+            searchButton.classList.remove('opacity-50', 'cursor-not-allowed');
+          }, 1000);
+        }
+      });
+
       function openVideoModal(videoUrl, title, startTime, quote) {
         if (!videoUrl) return alert('재생할 비디오가 없습니다.');
         document.getElementById('videoSource').src = videoUrl;

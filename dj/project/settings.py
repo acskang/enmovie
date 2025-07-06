@@ -37,10 +37,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'corsheaders',  # Flutter 앱과 연동을 위한 CORS 설정
     'phrase',  # Custom app for phrases
+    'api',  # Custom app for API
 ]
 
 MIDDLEWARE = [
+    # Add for Rest Framework and CORS
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # Default Django middleware
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -162,3 +169,24 @@ LOGGING = {
         },
     },
 }
+
+# REST Framework 설정
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+}
+
+# CORS 설정 (Flutter 앱과 연동을 위해)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # 필요에 따라 추가
+    "http://127.0.0.1:3000",
+]
+
+# 개발환경에서는 모든 origin 허용 (보안상 주의)
+CORS_ALLOW_ALL_ORIGINS = True  # 개발환경에서만 사용

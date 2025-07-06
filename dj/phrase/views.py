@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from phrase.application.get_movie_info import get_movie_info
 # from phrase.application.get_imdb_poster_url import get_poster_urls
+from phrase.application.get_movie_info import get_movie_info
 from phrase.application.common import convert_keys_for_template
 from phrase.application.load_to_db import load_to_db
 from phrase.application.clean_data import extract_movie_info
@@ -35,3 +35,5 @@ def process_text(request):
     
     # GET 요청인 경우 메인 페이지로 리다이렉트
     return render(request, 'index.html')
+
+
