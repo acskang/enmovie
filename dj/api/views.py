@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from phrase.models import Movie, MovieQuote
-from .serializers import MovieSerializer, MovieQuoteSerializer, MovieQuoteSearchSerializer
+from api.serializers import MovieSerializer, MovieQuoteSerializer, MovieQuoteSearchSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
