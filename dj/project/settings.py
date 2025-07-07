@@ -202,7 +202,7 @@ STATIC_URL = 'static/'
 
 # 환경별 정적 파일 설정
 if IS_PRODUCTION:
-    STATIC_ROOT = BASE_DIR.parent / "static_root"  # PythonAnywhere 정적 파일 경로
+    STATIC_ROOT = '/home/ganzskang/static'   # PythonAnywhere 정적 파일 경로
     STATICFILES_DIRS = []
 else:
     STATICFILES_DIRS = [
