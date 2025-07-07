@@ -12,9 +12,33 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 1. 기본 .env 파일 먼저 로드 (공통 설정)
+load_dotenv(BASE_DIR / '.env')
+
+# 2. 환경변수로 환경 확인 (시스템 환경변수 또는 기본 .env에서)
+environment = os.environ.get('DJANGO_ENVIRONMENT', 'development')
+
+# 3. 환경별 .env 파일 로드
+env_files = {
+    'development': '.env.development',
+    'staging': '.env.staging', 
+    'production': '.env.production'
+}
+
+env_file = env_files.get(environment)
+if env_file:
+    env_path = BASE_DIR / env_file
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"Loaded environment file: {env_file}")
+    else:
+        print(f"Warning: {env_file} not found, using default settings")
+
 
 # 환경 변수를 통한 환경 구분
 ENVIRONMENT = os.environ.get('DJANGO_ENVIRONMENT', 'development')
