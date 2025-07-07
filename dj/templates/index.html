@@ -222,7 +222,20 @@
       {% if movies %}
       <div class="animate-slide-up">
         <h2 class="text-2xl font-semibold text-center text-white mb-2">🎥 검색 결과</h2>
-        <p class="text-center text-white/70 mb-6">상위 5개 결과를 표시합니다</p>
+        <div class="text-center text-white/70 mb-6">
+          <p class="text-lg">
+            총 <span class="text-primary font-semibold">{{ total_results }}개</span>의 결과를 찾았습니다
+          </p>
+          {% if has_more_results %}
+            <p class="text-sm mt-1 text-yellow-300">
+              ⭐ 상위 {{ displayed_results }}개만 표시됩니다
+            </p>
+          {% else %}
+            <p class="text-sm mt-1">
+              모든 결과를 표시합니다
+            </p>
+          {% endif %}
+        </div>
 
         <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {% for movie in movies|slice:":5" %}

@@ -45,7 +45,10 @@ def process_text(request):
                 'message': user_text,
                 'translated_message': translated_text,
                 'error': f'"{user_text}"에 대한 검색 결과를 찾을 수 없습니다.',
-                'movies': []
+                'movies': [],
+                'total_results': 0,
+                'displayed_results': 0,
+                'has_more_results': False,
             }
             return render(request, 'index.html', context)
 
@@ -59,7 +62,10 @@ def process_text(request):
                 'message': user_text,
                 'translated_message': translated_text,
                 'error': f'"{user_text}"에 대한 영화 정보를 처리할 수 없습니다.',
-                'movies': []
+                'movies': [],
+                'total_results': 0,
+                'displayed_results': 0,
+                'has_more_results': False,
             }
             return render(request, 'index.html', context)
 
@@ -67,13 +73,20 @@ def process_text(request):
         print(f"💾 데이터베이스 저장 중...")
         movies = load_to_db(movies)
 
-        print(f"✅ 검색 완료: {len(movies)}개 결과")
+        # 검색 결과 통계 계산
+        total_results = len(movies)
+        displayed_results = min(total_results, 5)  # 최대 5개까지 표시
+
+        print(f"✅ 검색 완료: 총 {total_results}개 결과, {displayed_results}개 표시")
 
         context = {
             'message': user_text,  # 사용자가 입력한 원본 (한글 또는 영어)
             'translated_message': translated_text,  # 번역된 텍스트 (한글→영어 번역 시만)
             'search_used': search_text,  # 실제 검색에 사용된 텍스트
             'movies': movies,
+            'total_results': total_results,  # 전체 검색 결과 수
+            'displayed_results': displayed_results,  # 실제 표시되는 결과 수
+            'has_more_results': total_results > 5,  # 5개 초과 여부
         }
         return render(request, 'index.html', context)
     
