@@ -10,22 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# 환경 변수를 통한 환경 구분
+ENVIRONMENT = os.environ.get('DJANGO_ENVIRONMENT', 'development')
+IS_PRODUCTION = ENVIRONMENT == 'production'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bm3b^$t8*bkp7_rqg-7(9pc&u@+7b^(_u1n89^-ebi-oey5biz'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = not IS_PRODUCTION
 
-ALLOWED_HOSTS = ['ganzskang.pythonanywhere.com','movie.thesysm.com','127.0.0.1','localhost']
+# 환경별 허용 호스트
+if IS_PRODUCTION:
+    ALLOWED_HOSTS = ['ganzskang.pythonanywhere.com', 'movie.thesysm.com']
+else:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -43,6 +48,13 @@ INSTALLED_APPS = [
     'api',  # Custom app for API
 ]
 
+# 개발환경에서만 디버깅 도구 추가
+if DEBUG:
+    INSTALLED_APPS += [
+        'debug_toolbar',
+        'django_extensions',
+    ]
+
 MIDDLEWARE = [
     # Add for Rest Framework and CORS
     'corsheaders.middleware.CorsMiddleware',
@@ -56,6 +68,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# 개발환경에서만 디버그 툴바 미들웨어 추가
+if DEBUG:
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'project.urls'
 
@@ -82,12 +98,34 @@ WSGI_APPLICATION = 'project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if IS_PRODUCTION:
+    # MySQL 설정 (PythonAnywhere)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'ganzskang$default'),
+            'USER': os.environ.get('DB_USER', 'ganzskang'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'ths5rhd^^'),
+            'HOST': os.environ.get('DB_HOST', 'ganzskang.mysql.pythonanywhere-services.com'),
+            'PORT': os.environ.get('DB_PORT', '3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            },
+            'CONN_MAX_AGE': 600,  # 연결 재사용 (10분)
+        }
     }
-}
+else:
+    # SQLite 설정 (개발환경)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 30,  # 30초 타임아웃
+            }
+        }
+    }
 
 
 # Password validation
@@ -112,12 +150,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'ko-kr'  # 한국어 설정
+TIME_ZONE = 'Asia/Seoul'  # 한국 시간대
 
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -126,45 +162,96 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# 환경별 정적 파일 설정
+if IS_PRODUCTION:
+    STATIC_ROOT = BASE_DIR.parent / "static_root"  # PythonAnywhere 정적 파일 경로
+    STATICFILES_DIRS = []
+else:
+    STATICFILES_DIRS = [
+        BASE_DIR / 'static',
+        BASE_DIR / 'media',
+    ]
+    STATIC_ROOT = BASE_DIR / "static_root"  # 개발환경 정적 파일 경로
+
+# 미디어 파일 설정
+if IS_PRODUCTION:
+    MEDIA_ROOT = BASE_DIR / 'media'
+    MEDIA_URL = '/media/'
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
+    MEDIA_URL = '/media/'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-## add user project configurations
-# for static
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-    BASE_DIR / 'media',
-]
-STATIC_ROOT = BASE_DIR.parent / "djstatic"
-
-## Using local storage during the development stage
-MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_URL = '/media/'
-
+# 캐싱 설정
+if IS_PRODUCTION:
+    # Redis 캐시 (PythonAnywhere에서 Redis 사용하는 경우)
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
+else:
+    # 개발환경에서는 로컬 메모리 캐시
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
 
 # 로깅 설정
+LOG_LEVEL = 'INFO' if IS_PRODUCTION else 'DEBUG'
+LOG_FILE = 'django_production.log' if IS_PRODUCTION else 'django_development.log'
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
         'file': {
             'class': 'logging.FileHandler',
-            'filename': 'imdb_poster.log',
+            'filename': LOG_FILE,
+            'formatter': 'verbose',
         },
     },
     'root': {
         'handlers': ['console', 'file'],
-        'level': 'INFO',
+        'level': LOG_LEVEL,
     },
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'INFO',
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'phrase': {
+            'handlers': ['console', 'file'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'api': {
+            'handlers': ['console', 'file'],
+            'level': LOG_LEVEL,
             'propagate': False,
         },
     },
@@ -173,20 +260,106 @@ LOGGING = {
 # REST Framework 설정
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 20,  # 페이지 크기 증가
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '200/hour' if IS_PRODUCTION else '1000/hour',
+        'user': '2000/hour' if IS_PRODUCTION else '10000/hour'
+    }
 }
 
 # CORS 설정 (Flutter 앱과 연동을 위해)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # 필요에 따라 추가
-    "http://127.0.0.1:3000",
-]
+if IS_PRODUCTION:
+    CORS_ALLOWED_ORIGINS = [
+        "https://ganzskang.pythonanywhere.com",
+        "https://movie.thesysm.com",
+    ]
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",  # Flutter 기본 포트
+        "http://127.0.0.1:8080",
+    ]
+    CORS_ALLOW_ALL_ORIGINS = True
 
-# 개발환경에서는 모든 origin 허용 (보안상 주의)
-CORS_ALLOW_ALL_ORIGINS = True  # 개발환경에서만 사용
+# 보안 설정 (운영환경에서만 적용)
+if IS_PRODUCTION:
+    # HTTPS 설정
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1년
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # 쿠키 보안
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    
+    # 기타 보안 설정
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
+
+# 세션 설정
+if IS_PRODUCTION:
+    # 운영환경에서는 캐시 기반 세션 사용
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+    SESSION_COOKIE_AGE = 86400  # 24시간
+else:
+    # 개발환경에서는 데이터베이스 세션 사용
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+    SESSION_COOKIE_AGE = 86400 * 7  # 7일
+
+# 이메일 설정 (필요한 경우)
+if IS_PRODUCTION:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+else:
+    # 개발환경에서는 콘솔에 이메일 출력
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# 디버그 툴바 설정 (개발환경에서만)
+if DEBUG:
+    INTERNAL_IPS = [
+        '127.0.0.1',
+        'localhost',
+    ]
+    
+    DEBUG_TOOLBAR_CONFIG = {
+        'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+    }
+
+# 파일 업로드 설정
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+# 성능 최적화 설정
+if IS_PRODUCTION:
+    # 템플릿 캐싱 활성화
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        ('django.template.loaders.cached.Loader', [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ]),
+    ]
+    
+    # 정적 파일 압축 (django-compressor 설치 필요)
+    STATICFILES_FINDERS = [
+        'django.contrib.staticfiles.finders.FileSystemFinder',
+        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    ]
