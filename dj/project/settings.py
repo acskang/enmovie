@@ -110,7 +110,7 @@ TEMPLATES = [
         'DIRS': [
             BASE_DIR / 'templates',
         ],
-        'APP_DIRS': True,
+        'APP_DIRS': not IS_PRODUCTION,  # 중요: 운영환경에서는 False
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
@@ -120,6 +120,15 @@ TEMPLATES = [
         },
     },
 ]
+
+# 운영환경에서만 템플릿 캐싱 설정 추가
+if IS_PRODUCTION:
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        ('django.template.loaders.cached.Loader', [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ]),
+    ]
 
 WSGI_APPLICATION = 'project.wsgi.application'
 
