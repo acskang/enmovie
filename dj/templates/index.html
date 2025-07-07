@@ -63,6 +63,11 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       }
+      
+      .korean-translation {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+        border-left: 3px solid #10b981;
+      }
     </style>
   </head>
   <body class="bg-dark text-white font-sans min-h-screen px-4 py-8">
@@ -114,7 +119,7 @@
             type="text"
             name="user_text"
             id="user_text"
-            placeholder="영어 구문을 입력하세요..."
+            placeholder="한글 또는 영어 구문을 입력하세요..."
             autofocus
             autocomplete="off"
             class="w-full rounded-full border border-transparent bg-white/10 text-white placeholder:text-gray-400 px-6 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
@@ -133,8 +138,15 @@
         </form>
 
         {% if message %}
-        <div class="mt-6 text-center text-lg text-white/90">
-          <strong>검색한 구문:</strong> "{{ message }}"
+        <div class="mt-6 text-center">
+          <div class="text-lg text-white/90 mb-2">
+            <strong>검색한 구문:</strong> "{{ message }}"
+          </div>
+          {% if translated_message %}
+          <div class="text-md text-green-300/90">
+            <strong>🔄 번역됨:</strong> "{{ translated_message }}"
+          </div>
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -238,8 +250,21 @@
             </div>
             <div class="p-4">
               <h3 class="font-semibold text-lg mb-1">{{ movie.name }}</h3>
-              <p class="text-sm text-gray-300">⏰ {{ movie.start_time }}</p>
-              <p class="mt-2 italic text-sm border-l-4 border-primary pl-3 text-gray-200">"{{ movie.text }}"</p>
+              <p class="text-sm text-gray-300 mb-3">⏰ {{ movie.start_time }}</p>
+              
+              <!-- 영어 구문 -->
+              <div class="mb-3">
+                <p class="text-xs text-gray-400 mb-1">🇺🇸 Original</p>
+                <p class="italic text-sm border-l-4 border-primary pl-3 text-gray-200">"{{ movie.text }}"</p>
+              </div>
+              
+              <!-- 한글 번역 (JavaScript로 동적 번역) -->
+              <div class="korean-translation p-3 rounded-lg">
+                <p class="text-xs text-green-300 mb-1">🇰🇷 한글 번역</p>
+                <p class="italic text-sm text-green-100" id="korean-{{ forloop.counter0 }}" data-english="{{ movie.text }}">
+                  <span class="loading-dots">번역 중</span>
+                </p>
+              </div>
             </div>
           </div>
           {% endfor %}
@@ -264,7 +289,12 @@
           </video>
           <div class="mt-4 bg-gray-100 p-4 rounded">
             <p class="text-sm text-gray-700"><strong>시작 시간:</strong> <span id="videoTime"></span></p>
-            <blockquote id="videoQuote" class="mt-2 pl-3 border-l-4 border-primary italic text-gray-700"></blockquote>
+            <div class="mt-3">
+              <p class="text-xs text-gray-500 mb-1">🇺🇸 Original</p>
+              <blockquote id="videoQuote" class="pl-3 border-l-4 border-primary italic text-gray-700 mb-3"></blockquote>
+              <p class="text-xs text-green-600 mb-1">🇰🇷 한글 번역</p>
+              <blockquote id="videoQuoteKorean" class="pl-3 border-l-4 border-green-500 italic text-gray-700"></blockquote>
+            </div>
           </div>
         </div>
       </div>
@@ -418,14 +448,59 @@
             searchButton.classList.remove('opacity-50', 'cursor-not-allowed');
           }, 1000);
         }
+        
+        // 페이지 로드 시 영어 텍스트를 한글로 번역
+        translateEnglishTexts();
       });
+
+      // 영어 텍스트를 한글로 번역하는 함수
+      async function translateEnglishTexts() {
+        const koreanElements = document.querySelectorAll('[id^="korean-"]');
+        
+        for (let element of koreanElements) {
+          const englishText = element.getAttribute('data-english');
+          if (englishText) {
+            try {
+              const translatedText = await translateToKorean(englishText);
+              element.innerHTML = `"${translatedText}"`;
+            } catch (error) {
+              console.error('번역 오류:', error);
+              element.innerHTML = '<span class="text-gray-400">번역 실패</span>';
+            }
+          }
+        }
+      }
+
+      // MyMemory API를 사용한 영어→한글 번역 함수
+      async function translateToKorean(text) {
+        try {
+          const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ko`);
+          const data = await response.json();
+          
+          if (data.responseStatus === 200) {
+            return data.responseData.translatedText;
+          } else {
+            throw new Error('번역 API 오류');
+          }
+        } catch (error) {
+          console.error('번역 중 오류:', error);
+          return text; // 번역 실패 시 원본 텍스트 반환
+        }
+      }
 
       function openVideoModal(videoUrl, title, startTime, quote) {
         if (!videoUrl) return alert('재생할 비디오가 없습니다.');
+        
         document.getElementById('videoSource').src = videoUrl;
         document.getElementById('modalTitle').textContent = title;
         document.getElementById('videoTime').textContent = startTime;
         document.getElementById('videoQuote').textContent = quote;
+        
+        // 모달의 한글 번역도 추가
+        translateToKorean(quote).then(koreanText => {
+          document.getElementById('videoQuoteKorean').textContent = koreanText;
+        });
+        
         document.getElementById('videoPlayer').load();
         document.getElementById('videoModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
